@@ -1,17 +1,16 @@
-// TODO: https://codelabs.developers.google.com/codelabs/flutter-firebase#5 now
-
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() => runApp(MyApp());
 
-final dummySnapshot = [
-  {"name": "Filip", "votes": 15},
-  {"name": "Abraham", "votes": 14},
-  {"name": "Richard", "votes": 11},
-  {"name": "Ike", "votes": 10},
-  {"name": "Justin", "votes": 1},
-];
+// final dummySnapshot = [
+//   {"name": "Filip", "votes": 15},
+//   {"name": "Abraham", "votes": 14},
+//   {"name": "Richard", "votes": 11},
+//   {"name": "Ike", "votes": 10},
+//   {"name": "Justin", "votes": 1},
+// ];
 
 class MyApp extends StatelessWidget {
   @override
@@ -35,24 +34,36 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Baby Name Votes')),
-      body: _buildBody(context),
+      body: FutureBuilder(
+        future: _buildBody(context),
+        builder: (BuildContext context, AsyncSnapshot<Widget> widget) {
+          return widget.data;
+        },
+      ),
     );
   }
 
-  Widget _buildBody(BuildContext context) {
-    // TODO : get actual snapshot from CloudFirestore
-    return _buildList(context, dummySnapshot);
+  Future<Widget> _buildBody(BuildContext context) async {
+    await Firebase.initializeApp();
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('Baby').snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return LinearProgressIndicator();
+
+        return _buildList(context, snapshot.data.docs);
+      },
+    );
   }
 
-  Widget _buildList(BuildContext, List<Map> snapshot) {
+  Widget _buildList(BuildContext, List<DocumentSnapshot> snapshot) {
     return ListView(
       padding: const EdgeInsets.only(top: 20.0),
       children: snapshot.map((e) => _buildListItem(context, e)).toList(),
     );
   }
 
-  Widget _buildListItem(BuildContext, Map data) {
-    final record = Record.fromMap(data);
+  Widget _buildListItem(BuildContext, DocumentSnapshot data) {
+    final record = Record.fromSnapshot(data);
 
     return Padding(
       key: ValueKey(record.name),
